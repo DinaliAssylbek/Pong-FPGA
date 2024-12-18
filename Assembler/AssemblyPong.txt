@@ -1,0 +1,280 @@
+XORI 0 $0 #0 use as a no op
+
+#LOAD ADDR DEST, STOR SRC ADDR
+
+# Initialization of registers
+LUI 128 $0 #1 Memory address for vga (h8000)
+
+MOVI 1 $1 #2 Controller 1 Memory Address
+LUI 192 $1 #3 Controller 1 Memory Address (C001)
+
+MOVI 2 $2 #4 Controller 2 Memory Address
+LUI 192 $2 #5 Controller 2 Memory Address (C002)
+
+MOVI 3 $14 #6 Ball X Velocity in Reg14
+MOVI 2 $15 #7 Ball Y Velocity in Reg15
+
+# Intro screen loop initialization
+MOV $0 $3  #8 Memory location of game_state
+ADDI 15 $3 #9 Memory location of game_state (0h800F)
+
+MOV $0 $5 # Load player 1 score memory address
+ADDI 13 $5 # Load player 1 score memory address
+MOV $0 $6 # Load player 2 score memory address
+ADDI 14 $6 # Load player 2 score memory address
+MOVI 0 $7 # Load the new score for both players
+STOR $7 $5 # Load 0 into the player 1 score
+STOR $7 $6 # Load 0 into the player 2 score
+
+# Intro screen loop
+LOAD $1 $4 #10 Load controller input into register 4
+ANDI 16 $4 #11 Only look at the button A
+CMPI 16 $4 #12 Check if A button is pressed
+BEQ 2 #13 Will branch out of the loop
+BUC -4 #14 Jump back 4 lines to look at the load instruction
+
+MOVI 1 $4 #15 Store 1 in Reg4
+STOR $4 $3 #16 Store the up button output to game_state memory location
+
+# Game loop initalization
+MOV $0 $3 #17 P1 paddle location memory address
+ADDI 2 $3 #18 P1 paddle location memory address 
+MOV $0 $4 #19 P2 paddle location memory address
+ADDI 4 $4 #20 P2 paddle location memory address
+MOV $0 $5 #21 Ball X memory location
+ADDI 8 $5 #22 Ball X memeory location
+MOV $0 $6 #23 Ball Y memory location
+ADDI 9 $6 #24 Ball Y memory location
+
+MOVI 230 $7 #25 Starting Y position of both paddles 
+MOVI 255 $8 #26 Starting Y position of ball
+ADDI 13 $8 #27 Starting Y position of ball
+MOVI 255 $9 #28 Starting X position of ball
+ADDI 127 $9 #29 Starting X position of ball
+ADDI 61 $9 #30 Starting X position of ball
+
+STOR $7 $3 #31 Center P1 paddle position
+STOR $7 $4 #32 Center P2 paddle position
+STOR $8 $6 #33 Center ball y position 
+STOR $9 $5 #34 Center ball x position
+
+# Game loop starts
+
+# Delay loop
+MOVI 0 $10 #35 
+LUI 96 $10 # Register 0 is H6000
+SUBI 1 $10 # Decrement register0 by 1
+CMPI 0 $10 # Check if register 0 is at 0
+BNE -2 # Loop back 
+
+#Ball movement X
+MOV $0 $3 # move 8000 into reg3
+ADDI 8 $3 # move 8008 into reg3
+LOAD $3 $7 #move ball Xposition into Reg7
+ADD $14 $7 #add x-velocity to ball xpos in reg 7
+STOR $7 $3 #store Ballx into Memory[$3] 8008
+
+#Ball movement Y
+MOV $0 $3 # move 8000 into reg3
+ADDI 9 $3 # move 8009 into reg3
+LOAD $3 $7 #move ball Yposition into Reg7
+ADD $15 $7 #add Y-velocity to ball xpos in reg 7
+STOR $7 $3 #store BallY into Memory[$3] 8009
+
+#UP logic for P1
+LOAD $1 $3 # Reload Controller input to register 3
+ANDI 1 $3 # Mask the up value from controller
+CMPI 1 $3 #Check if Up is pressed
+BNE 8  #branch down past logic if Up not pressed
+MOV $0 $3 # P1 paddle location memory address
+ADDI 2 $3 # P1 paddle location memory address 8002 
+LOAD $3 $4 # Load P1 paddle location
+CMPI 20 $4 # Compare paddle location to 20 to ensure it is below top bound
+BGE 3 # branch to down logic if out of bound
+ADDI -3 $4 # Move paddle up 3 pixels
+STOR $4 $3 # Store new pixel value
+
+#DOWN logic for P1
+
+LOAD $1 $3 # Reload Controller input to register 3
+ANDI 2 $3 # Mask the down value from controller
+CMPI 2 $3 #Check if down is pressed
+BNE 10 # branch down past logic if Up not pressed
+MOV $0 $3 # P1 paddle location memory address
+ADDI 2 $3 # P1 paddle location memory address 8002
+LOAD $3 $4 # Load P2 paddle location
+MOVI 179 $5 #Move lower bits to register 5
+LUI 1 $5 # register 5 holds 435
+CMP $5 $4 #Compare paddle location to 435, to ensure it is above bottom bound
+BLE 3 #branch to player 2 logic if attempting to move out of bounds
+ADDI 3 $4 # Move paddle up 3 pixels
+STOR $4 $3 # Store new pixel value
+
+#UP logic for P2
+LOAD $2 $3 # Reload Controller input to register 3
+ANDI 1 $3 # Mask the up value from controller
+CMPI 1 $3 #Check if Up is pressed
+BNE 8 # branch down past logic if Up not pressed
+MOV $0 $3 # P2 paddle location memory address
+ADDI 4 $3 # P2 paddle location memory address 8004
+LOAD $3 $4 # Load P2 paddle location
+CMPI 20 $4 # Check P2 paddle location to ensure it's below top bound
+BGE 3 # If above bounds skip logic
+ADDI -3 $4 # Move paddle up 3 pixels
+STOR $4 $3 # Store new pixel value
+
+#DOWN logic for P2
+
+LOAD $2 $3 # Reload Controller input to register 3
+ANDI 2 $3 # Mask the down value from controller
+CMPI 2 $3 #Check if down is pressed
+BNE 10 # branch down past logic if Up not pressed
+MOV $0 $3 # P2 paddle location memory address
+ADDI 4 $3 # P2 paddle location memory address 8004
+LOAD $3 $4 # Load P2 paddle location
+MOVI 179 $5 #Move lower bits to register 5
+LUI 1 $5 # register 5 holds 435
+CMP $5 $4 $ Reg 5 still holds 435, Compare regs to ensure P2 paddle is above bottom bound
+BLE 3 #Skip logic if paddle attempts to go out of bounds
+ADDI 3 $4 # Move paddle down 3 pixels
+STOR $4 $3 # Store new pixel value 
+
+# Bounce off left (change to scoring)
+MOVI 130 $5 #move 130 into Reg5
+MOV $0 $3 # move 8000 into reg3
+ADDI 8 $3 # move 8008 into reg3 (mem ball xpos)
+LOAD $3 $7 #move ball Xposition into Reg7
+CMP $7 $5 #Compare ball x pos and 130
+BGE 13 #Branch if ball is below the paddle location CHANGE BACK TO BGE
+MOV $14 $11 #Move current ball Xvelocity into Reg11
+MOVI 0 $14 #Move 0 into reg14
+SUB $11 $14 #Zero minus ball xVel to flip velocity in reg14
+
+# Update player 2 score
+MOV $0 $3 # Load player score 2 memory address
+ADDI 14 $3 # Load player score 2 memory address
+LOAD $3 $4 # Load player score 2 to register 4
+ADDI 1 $4 # Add 1 to player 2 score
+CMPI 12 $4 # See if player 1 score is 12
+BEQ 86 # If score is 12 jump out of the game loop
+STOR $4 $3 # Store the updated score of 1
+MOVI 24 $11 #store 35 in register 11
+JUC $11 #Jump to the start of game loop, line 35
+
+# Bounce off Right (change to scoring)
+MOVI 253 $5 #move 130 into Reg5
+LUI 2 $5 #Reg5 set to 765
+MOV $0 $3 # move 8000 into reg3
+ADDI 8 $3 # move 8008 into reg3 (mem ball xpos)
+LOAD $3 $7 #move ball Xposition into Reg7
+CMP $7 $5 #Compare ball x pos and 130
+BLE 13 #Branch if ball is not at right  CHANGE BACK TO BLE
+MOV $14 $11 #Move current ball Xvelocity into Reg11
+MOVI 0 $14 #Move 0 into reg14
+SUB $11 $14 #Zero minus ball xVel to flip velocity in reg14
+
+# Update player 1 score
+MOV $0 $3 # Load player score 1 memory address
+ADDI 13 $3 # Load player score 1 memory address
+LOAD $3 $4 # Load player score 1 to register 4
+ADDI 1 $4 # Add 1 to player 1 score
+CMPI 12 $4 # See if player 1 score is 12
+BEQ 67 # If score is 12 jump out of the game loop
+STOR $4 $3 # Store the updated score of 1
+MOVI 24 $11 #store 35 in register 11
+JUC $11 #Jump to the start of game loop, line 35
+
+# Bounce off Top
+
+MOVI 20 $5 #move 20 into Reg5
+MOV $0 $3 # move 8000 into reg3
+ADDI 9 $3 # move 8009 into reg3 (mem ball 9pos)
+LOAD $3 $7 #move ball Yposition into Reg7
+CMP $7 $5 #Compare ball x pos and 20
+BLE 4 #Branch if ball is below the paddle location
+MOV $15 $11 #Move current ball Xvelocity into Reg11
+MOVI 0 $15 #Move 0 into reg14
+SUB $11 $15 #Zero minus ball xVel to flip velocity in reg14
+
+# Bounce off bottom
+
+MOVI 254 $5 # move 254 into Reg5
+LUI 1 $5 # move 510
+MOV $0 $3 # move 8000 into reg3
+ADDI 9 $3 # move 8009 into reg3 (mem ball 9pos)
+LOAD $3 $7 #move ball Yposition into Reg7
+CMP $7 $5 #Compare ball x pos and 510
+BGE 4 #Branch if ball is below the paddle location
+MOV $15 $11 #Move current ball Xvelocity into Reg11
+MOVI 0 $15 #Move 0 into reg14
+SUB $11 $15 #Zero minus ball xVel to flip velocity in reg14
+
+#Ball collision Paddle1
+MOV $0 $3 # move 8000 into reg3
+ADDI 8 $3 # move 8008 into reg3
+LOAD $3 $7 #move ball Xposition into Reg7
+MOVI 160 $5 #move 160 into Reg5
+CMP $7 $5    #compare ball position to 160 (xballpos > 170)
+BGE 15 #Skip if ball is not in collision zone
+MOVI 150 $5 #move 150 into Reg5
+CMP $7 $5    #compare ball position to 150 (xballpos > 150)
+BLE 12 #Skip if ball is not in collision zon
+MOV $0 $3 # move 8000 into Reg3
+ADDI 9 $3 # move 8009 into Reg3 (memory address for ball Ypos)
+LOAD $3 $8 #move ball Yposition into Reg8
+SUBI 7 $3 # move 8002 into reg3 (memory address for paddle1 location)
+LOAD $3 $9 #move paddle1 Yposition into Reg9
+CMP $8 $9 #Reg9 value minus Reg8, checking for ball above paddle
+BLT 5 #Branch if ball is above the paddle location
+ADDI 75 $9 #move paddle1 Yposition+75 into Reg9
+CMP $8 $9 #Reg9 value minus Reg8, checking for ball above paddle
+BGT 2 #Branch if ball is below the paddle location
+
+MOVI 3 $14 #Move 0 into reg14
+
+#Ball collision Paddle2
+MOV $0 $3 # move 8000 into reg3
+ADDI 8 $3 # move 8008 into reg3
+LOAD $3 $7 #move ball Xposition into Reg7
+MOVI 213 $5 #move 213 into Reg5
+LUI 2 $5 # move 720 inyo Reg5
+CMP $7 $5    # compare ball position to 720 (xballpos < 720)
+BLE 16 #Skip if ball is not in collision zone
+ADDI 10 $5 #change to 730 into Reg5
+CMP $7 $5    #compare ball position to 730 (xballpos > 150)
+BGE 13 #Skip if ball is not in collision zone
+MOV $0 $3 # move 8000 into Reg3
+ADDI 9 $3 # move 8009 into Reg3 (memory address for ball Ypos)
+LOAD $3 $8 #move ball Yposition into Reg8
+SUBI 5 $3 # move 8004 into reg3 (memory address for paddle2 location)
+LOAD $3 $9 #move paddle2 Yposition into Reg9
+CMP $8 $9 #Reg9 value minus Reg8, checking for ball above paddle
+BLT 6 #Branch if ball is above the paddle location
+ADDI 75 $9 #move paddle1 Yposition+75 into Reg9
+CMP $8 $9 #Reg9 value minus Reg8, checking for ball above paddle
+BGT 3 #Branch if ball is below the paddle location
+MOVI 253 $14
+LUI 255 $14 #Move 0 into reg14
+
+MOVI 42 $11 #store 35 in register 11
+JUC $11 #JUmp to the start of game loop, line 42
+
+# Change to game over screen
+MOV $0 $3 # Load game_state memory address into register 3
+ADDI 15 $3 # Load game_state memory address into register 3
+LOAD $3 $4 # Load game_state into register 4
+ADDI 1 $4 # Change game_state to game over screen
+STOR $4 $3 # Load game_state (register 6) back into it's address 
+
+# Wait for an input in game over screen
+LOAD $1 $4 #10 Load controller input into register 5
+ANDI 32 $4 #11 Only look at the button A
+CMPI 32 $4 #12 Check if A button is pressed
+BEQ 2 #13 Will branch out of the loop
+BUC -4 #14 Jump back 4 lines to look at the load instruction
+
+MOVI 0 $4 #15 Store 0 in 4
+STOR $4 $3 #16 Store the up button output to game_state memory location
+
+MOVI 2 $11 #store 2 in register 11
+JUC $11 #JUmp to the start of game
