@@ -1,0 +1,6 @@
+[submodule "CPU-Pong"]
+	path = CPU-Pong
+	url = https://github.com/DinaliAssylbek/CPU-Pong.git
+[submodule "VGA-Pong"]
+	path = VGA-Pong
+	url = https://github.com/DinaliAssylbek/VGA-Pong.git
